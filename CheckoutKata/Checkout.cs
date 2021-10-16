@@ -1,31 +1,41 @@
-﻿using System.Collections.Generic;
+﻿using CheckoutKata.Models;
+using System.Collections.Generic;
 using System.Linq;
 
 namespace CheckoutKata
 {
 	public class Checkout
 	{
-		private readonly ItemPrices itemPrices;
+		private readonly IItemPricesRepository itemPricesRepository;
+		private readonly IOfferCalculator offerCalculator;
 		private readonly List<Item> basket = new List<Item>();
 
-		public Checkout(ItemPrices itemPrices)
+		public Checkout(IItemPricesRepository itemPricesRepository, IOfferCalculator offerCalculator)
 		{
-			this.itemPrices = itemPrices ?? throw new System.ArgumentNullException(nameof(itemPrices));
+			this.itemPricesRepository = itemPricesRepository ?? throw new System.ArgumentNullException(nameof(itemPricesRepository));
+			this.offerCalculator = offerCalculator ?? throw new System.ArgumentNullException(nameof(offerCalculator));
 		}
 
-		public int AddItemsToBasket(params string[] items)
+		public double AddToBasket(params string[] items)
 		{
-			var totalCost = 0;
+			var totalCost = this.CalculateTotalItemCost(items.ToList());
+
+			totalCost -= this.offerCalculator.CalculateTotalPriceReduction(this.basket);
+
+			return totalCost;
+		}
+
+		private double CalculateTotalItemCost(List<string> items)
+		{
+			var totalCost = 0.0;
 
 			foreach (string item in items)
 			{
-				var itemAndPrice = this.itemPrices.ItemsAndPrices.FirstOrDefault(i => i.Name == item);
+				var itemAndPrice = this.itemPricesRepository.GetPrice(item);
 				if (itemAndPrice == null)
 				{
 					throw new ItemNotFoundException(item);
 				}
-
-				this.basket.Add(itemAndPrice);
 
 				totalCost += itemAndPrice.Price;
 			}
