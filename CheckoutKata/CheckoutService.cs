@@ -4,13 +4,13 @@ using System.Linq;
 
 namespace CheckoutKata
 {
-	public class Checkout
+	public class CheckoutService
 	{
 		private readonly IItemPricesRepository itemPricesRepository;
 		private readonly IOfferCalculator offerCalculator;
 		private readonly List<Item> basket = new List<Item>();
 
-		public Checkout(IItemPricesRepository itemPricesRepository, IOfferCalculator offerCalculator)
+		public CheckoutService(IItemPricesRepository itemPricesRepository, IOfferCalculator offerCalculator)
 		{
 			this.itemPricesRepository = itemPricesRepository ?? throw new System.ArgumentNullException(nameof(itemPricesRepository));
 			this.offerCalculator = offerCalculator ?? throw new System.ArgumentNullException(nameof(offerCalculator));
@@ -18,17 +18,6 @@ namespace CheckoutKata
 
 		public double AddToBasket(params string[] items)
 		{
-			var totalCost = this.CalculateTotalItemCost(items.ToList());
-
-			totalCost -= this.offerCalculator.CalculateTotalPriceReduction(this.basket);
-
-			return totalCost;
-		}
-
-		private double CalculateTotalItemCost(List<string> items)
-		{
-			var totalCost = 0.0;
-
 			foreach (string item in items)
 			{
 				var itemAndPrice = this.itemPricesRepository.GetPrice(item);
@@ -37,7 +26,23 @@ namespace CheckoutKata
 					throw new ItemNotFoundException(item);
 				}
 
-				totalCost += itemAndPrice.Price;
+				this.basket.Add(itemAndPrice);
+			}
+
+			var totalCost = this.CalculateTotalItemCost();
+
+			totalCost -= this.offerCalculator.CalculateTotalPriceReduction(this.basket);
+
+			return totalCost;
+		}
+
+		private double CalculateTotalItemCost()
+		{
+			var totalCost = 0.0;
+
+			foreach (var item in this.basket)
+			{
+				totalCost += item.Price;
 			}
 
 			return totalCost;

@@ -5,7 +5,7 @@ using Xunit;
 
 namespace CheckoutKata.Tests
 {
-	public class CheckoutTests
+	public class CheckoutServiceTests
 	{
 		private readonly Mock<IItemPricesRepository> mockItemPricesRepository = new Mock<IItemPricesRepository>();
 		private readonly Mock<IOfferCalculator> mockOfferCalculator = new Mock<IOfferCalculator>();
@@ -13,9 +13,9 @@ namespace CheckoutKata.Tests
 		[Fact]
 		public void GivenAnItemIsAddedToTheBasket_WhenThatItemDoesntExist_ThenAnExceptionIsThrown()
 		{
-			var checkout = new Checkout(this.mockItemPricesRepository.Object, this.mockOfferCalculator.Object);
+			var checkoutService = new CheckoutService(this.mockItemPricesRepository.Object, this.mockOfferCalculator.Object);
 
-			Assert.Throws<ItemNotFoundException>(() => checkout.AddToBasket("InvalidItem"));
+			Assert.Throws<ItemNotFoundException>(() => checkoutService.AddToBasket("InvalidItem"));
 		}
 
 		[Theory]
@@ -35,9 +35,9 @@ namespace CheckoutKata.Tests
 			this.mockItemPricesRepository.Setup(m => m.GetPrice(item2)).Returns(new Item { Name = item2, Price = item2Price });
 			this.mockItemPricesRepository.Setup(m => m.GetPrice(item3)).Returns(new Item { Name = item3, Price = item3Price });
 
-			var checkout = new Checkout(this.mockItemPricesRepository.Object, this.mockOfferCalculator.Object);
+			var checkoutService = new CheckoutService(this.mockItemPricesRepository.Object, this.mockOfferCalculator.Object);
 
-			var totalCost = checkout.AddToBasket(item1, item2, item3);
+			var totalCost = checkoutService.AddToBasket(item1, item2, item3);
 
 			Assert.Equal(expected, totalCost);
 		}
@@ -50,11 +50,27 @@ namespace CheckoutKata.Tests
 			this.mockOfferCalculator.Setup(m => m.CalculateTotalPriceReduction(It.IsAny<List<Item>>()))
 				.Returns(5);
 
-			var checkout = new Checkout(this.mockItemPricesRepository.Object, this.mockOfferCalculator.Object);
+			var checkout = new CheckoutService(this.mockItemPricesRepository.Object, this.mockOfferCalculator.Object);
 
 			var totalCost = checkout.AddToBasket("B", "B", "B");
 
 			Assert.Equal(expected: 40, totalCost);
+		}
+
+		[Fact]
+		public void GivenItemsAreAlreadyInTheBasket_WhenMoreItemsAreAdded_TheTotalPriceGetsRecalculated()
+		{
+			this.mockItemPricesRepository.Setup(m => m.GetPrice("A")).Returns(new Item { Name = "A", Price = 10 });
+			this.mockItemPricesRepository.Setup(m => m.GetPrice("B")).Returns(new Item { Name = "B", Price = 15 });
+			this.mockItemPricesRepository.Setup(m => m.GetPrice("C")).Returns(new Item { Name = "C", Price = 40 });
+
+			var checkoutService = new CheckoutService(this.mockItemPricesRepository.Object, this.mockOfferCalculator.Object);
+
+			checkoutService.AddToBasket("A", "A", "A");
+
+			var totalCost = checkoutService.AddToBasket("B");
+
+			Assert.Equal(expected: 45, totalCost);
 		}
 	}
 }
