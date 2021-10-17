@@ -29,21 +29,9 @@ namespace CheckoutKata
 				this.basket.Add(itemAndPrice);
 			}
 
-			var totalCost = this.CalculateTotalItemCost();
+			var totalCost = this.basket.Sum(i => i.Price);
 
 			totalCost -= this.offerCalculator.CalculateTotalPriceReduction(this.basket);
-
-			return totalCost;
-		}
-
-		private double CalculateTotalItemCost()
-		{
-			var totalCost = 0.0;
-
-			foreach (var item in this.basket)
-			{
-				totalCost += item.Price;
-			}
 
 			return totalCost;
 		}
